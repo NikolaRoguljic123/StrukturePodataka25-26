@@ -24,5 +24,5 @@ int brojstud() {
 
 		brojac++;
 		}
-	print("%d", brojac);
+	printf("%d", brojac);
 }
