@@ -1,128 +1,108 @@
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
-#define ERROR (-1)
+typedef struct * Position;
+typedef struct Node {
+    int data;
+    Position Next;
+} Node;
 
-typedef struct osoba* Position;
-typedef struct osoba {
-    int data;       
-    Position Next;   
-} osoba;
-
-// Prototipi funkcija
-int Push(Position* P, int data);
-int Pop(Position* P);
-int IsEmpty(Position P);
-int EvaluatePostfix(char* expression);
-
-int main() {
-    char expression[256];
-
-   
-    printf("Enter a postfix expression (space separated): ");
-    fgets(expression, sizeof(expression), stdin);
-
-   
-    int result = EvaluatePostfix(expression);
-    printf("Result: %d\n", result);
-
-    return 0;
-}
-
-// Function to push an element onto the stack
-int Push(Position* P, int data) {
-    Position newElem = (Position)malloc(sizeof(osoba));  
-    if (newElem == NULL) {
-        printf("Error allocating memory!\n");
-        return ERROR;
+    Push(Position head, int value) {
+    Position newNode = (Position)malloc(sizeof(Node));
+    if (!newNode) {
+        printf("Greska u alokaciji memorije!\n");
+        exit(1);
     }
 
-    newElem->data = data;     
-    newElem->Next = *P;       
-    *P = newElem;           
-
-    return 0;
+    newNode->data = value;
+    newNode->Next = head->Next;
+    head->Next = newNode;
 }
 
 
-int Pop(Position* P) {
-    if (*P == NULL) {
-        printf("Error: Stack is empty!\n");
-        return ERROR; 
+int Pop(Position head) {
+    if (head->Next == NULL) {
+        printf("Greska: stog je prazan!\n");
+        exit(1);
     }
 
-    Position temp = *P;       
-    int data = temp->data;   
-    *P = temp->Next;         
+    Position temp = head->Next;
+    int value = temp->data;
 
-    free(temp);               
-    return data;             
+    head->Next = temp->Next;
+    free(temp);
+
+    return value;
 }
 
-int IsEmpty(Position P) {
-    return P == NULL;  
-}
+// Evaluacija postfiksnog izraza
+int EvaluatePostfix(char* expr, Position head) {
+    char* token = strtok(expr, " ");
 
-
-int EvaluatePostfix(char* expression) {
-    Position stack = NULL; 
-
-   
-    char* token = strtok(expression, " ");
     while (token != NULL) {
-        if (isdigit(token[0])) {
-            Push(&stack, atoi(token));
+
+        
+        if (isdigit(token[0]) || 
+           (token[0] == '-' && isdigit(token[1]))) {
+
+            Push(head, atoi(token));
         }
         else {
-           
-            int operand2 = Pop(&stack);  
-            int operand1 = Pop(&stack);  
+          
+            int b = Pop(head);
+            int a = Pop(head);
+            int result = 0;
 
-            int result;
             switch (token[0]) {
-            case '+':
-                result = operand1 + operand2;
-                break;
-            case '-':
-                result = operand1 - operand2;
-                break;
-            case '*':
-                result = operand1 * operand2;
-                break;
-            case '/':
-                if (operand2 == 0) {
-                    printf("Error: Division by zero\n");
-                    return ERROR;
-                }
-                result = operand1 / operand2;
-                break;
-            default:
-                printf("Error: Unknown operator %c\n", token[0]);
-                return ERROR;
+                case '+': result = a + b; break;
+                case '-': result = a - b; break;
+                case '*': result = a * b; break;
+                case '/': 
+                    if (b == 0) {
+                        printf("Dijeljenje s nulom!\n");
+                        exit(1);
+                    }
+                    result = a / b;
+                    break;
+                default:
+                    printf("Nepoznat operator: %s\n", token);
+                    exit(1);
             }
 
-            Push(&stack, result);
+            Push(head, result);
         }
 
-    
         token = strtok(NULL, " ");
     }
 
-
-    int finalResult = Pop(&stack);
-    if (IsEmpty(stack)) {
-        return finalResult;  
-    }
-    else {
-        printf("Error: Invalid postfix expression\n");
-        return ERROR;
-    }
+    return Pop(head);
 }
 
+int main() {
+    FILE* file = fopen("postfix.txt", "r");
+    if (!file) {
+        printf("Greska: ne mogu otvoriti postfix.txt\n");
+        return 1;
+    }
+
+    char buffer[256];
+    fgets(buffer, sizeof(buffer), file);
+    fclose(file);
+
+    buffer[strcspn(buffer, "\n")] = 0;//vazno 
+
+    Node head;
+    head.Next = NULL;
+
+    int result = EvaluatePostfix(buffer, &head);
+
+    printf("Rezultat: %d\n", result);
+
+    return 0;
+}
 
 
 
