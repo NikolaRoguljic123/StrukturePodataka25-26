@@ -1,0 +1,152 @@
+﻿
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+
+typedef struct Artikl* Pointer;
+typedef struct Racun* Pointer2;
+
+
+typedef struct Artikl {
+    char naziv[100];
+    int kolicina;
+    float cijena;
+    Pointer next;
+} Artikl;
+
+
+typedef struct Racun {
+    char datum[11];
+    Pointer artikli;
+    Pointer2 next;
+} Racun;
+
+
+int compare_dates(const char* date1, const char* date2) {
+    return strcmp(date1, date2);
+}
+
+
+void add_artikl(Pointer* head, const char* naziv, int kolicina, float cijena) {
+    Pointer new_artikl = (Pointer)malloc(sizeof(Artikl));
+    strcpy(new_artikl->naziv, naziv);
+    new_artikl->kolicina = kolicina;
+    new_artikl->cijena = cijena;
+    new_artikl->next = NULL;
+
+    /
+        if (*head == NULL || strcmp((*head)->naziv, naziv) > 0) {
+            new_artikl->next = *head;
+            *head = new_artikl;
+        }
+        else {
+            Pointer current = *head;
+            while (current->next != NULL && strcmp(current->next->naziv, naziv) < 0) {
+                current = current->next;
+            }
+            new_artikl->next = current->next;
+            current->next = new_artikl;
+        }
+}
+
+
+void add_racun(Pointer2* head, const char* datum, Pointer artikli) {
+    Pointer2 new_racun = (Pointer2)malloc(sizeof(Racun));
+    strcpy(new_racun->datum, datum);
+    new_racun->artikli = artikli;
+    new_racun->next = NULL;
+
+    // Insertion in sorted order by date
+    if (*head == NULL || compare_dates((*head)->datum, datum) > 0) {
+        new_racun->next = *head;
+        *head = new_racun;
+    }
+    else {
+        Pointer2 current = *head;
+        while (current->next != NULL && compare_dates(current->next->datum, datum) < 0) {
+            current = current->next;
+        }
+        new_racun->next = current->next;
+        current->next = new_racun;
+    }
+}
+
+
+void load_racuni(const char* filename, Pointer2* racuni_head) {
+    FILE* file = fopen(filename, "r");
+    if (!file) {
+        printf("Ne mogu otvoriti datoteku: %s\n", filename);
+        return;
+    }
+
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        char datum[11];
+        sscanf(line, "%s", datum);
+
+        Pointer artikli_head = NULL;
+        while (fgets(line, sizeof(line), file) && line[0] != '\n') {
+            char naziv[100];
+            int kolicina;
+            float cijena;
+            sscanf(line, "%99[^,], %d, %f", naziv, &kolicina, &cijena);
+            add_artikl(&artikli_head, naziv, kolicina, cijena);
+        }
+
+        add_racun(racuni_head, datum, artikli_head);
+    }
+
+    fclose(file);
+}
+
+
+void query(Pointer2 head, const char* artikl_naziv, const char* start_date, const char* end_date) {
+    float price = 0.0;
+    int quantity = 0;
+
+    while (racuni_head != NULL) {
+
+        if (compare_dates(racuni_head->datum, start_date) >= 0 && compare_dates(racuni_head->datum, end_date) <= 0) {
+            Pointer artikl = racuni_head->artikli;
+            while (artikl != NULL) {
+                if (strcmp(artikl->naziv, artikl_naziv) == 0) {
+                    price += artikl->kolicina * artikl->cijena;
+                    quantity += artikl->kolicina;
+                }
+                artikl = artikl->next;
+            }
+        }
+        racuni_head = racuni_head->next;
+    }
+
+    if (total_quantity > 0) {
+        printf("Ukupno potrošeno na '%s' između %s i %s: %.2f kn, ukupno kupljeno: %d komada\n",
+            artikl_naziv, start_date, end_date, total_price, total_quantity);
+    }
+    else {
+        printf("Nema podataka za artikl '%s' u zadanom vremenskom razdoblju.\n", artikl_naziv);
+    }
+}
+
+int main() {
+    Pointer2 head = NULL;
+
+
+    load_racuni("racuni.txt", &head);
+
+
+    char artikl_naziv[100];
+    char start_date[11], end_date[11];
+
+    printf("Unesite naziv artikla: ");
+    scanf("%99s", artikl_naziv);
+    printf("Unesite početni datum (YYYY-MM-DD): ");
+    scanf("%10s", start_date);
+    printf("Unesite krajnji datum (YYYY-MM-DD): ");
+    scanf("%10s", end_date);
+
+    query(racuni_head, artikl_naziv, start_date, end_date);
+
+    return 0;
+}
